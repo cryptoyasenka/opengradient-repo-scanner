@@ -26,7 +26,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // TODO Phase 3: add x402 payment gate before calling analyzeRepo
   try {
     const verdict = await analyzeRepo(repoData);
     return NextResponse.json(verdict, { status: 200 });

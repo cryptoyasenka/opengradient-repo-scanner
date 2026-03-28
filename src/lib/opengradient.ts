@@ -91,9 +91,79 @@ Respond ONLY with valid JSON matching this exact schema. No markdown fences, no 
   return systemInstruction + '\n\nREPOSITORY DATA:\n' + JSON.stringify(bundle, null, 2);
 }
 
-export async function analyzeRepo(data: RepoData): Promise<VerdictResult> {
-  const prompt = buildSecurityPrompt(data);
+async function callWithX402(prompt: string): Promise<{ rawContent: string; txHash: string | null }> {
+  const privateKey = process.env.APP_WALLET_PRIVATE_KEY;
 
+  if (!privateKey) {
+    console.warn('[opengradient] APP_WALLET_PRIVATE_KEY not set — calling OpenGradient without x402 payment');
+    return callDirect(prompt);
+  }
+
+  try {
+    const { wrapFetchWithPayment, x402Client } = await import('@x402/fetch');
+    const { registerExactEvmScheme } = await import('@x402/evm/exact/client');
+    const { privateKeyToAccount } = await import('viem/accounts');
+
+    const account = privateKeyToAccount(privateKey as `0x${string}`);
+
+    // Create a simple signer compatible with ExactEvmScheme
+    const signer = {
+      address: account.address,
+      signTypedData: account.signTypedData.bind(account),
+    };
+
+    const client = new x402Client();
+    registerExactEvmScheme(client, { signer });
+
+    const x402fetch = wrapFetchWithPayment(fetch, client);
+
+    const response = await x402fetch(OPENGRADIENT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-SETTLEMENT-TYPE': 'individual',
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1000,
+        temperature: 0.2,
+      }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw Object.assign(
+        new Error(`OpenGradient returned ${response.status}: ${body.slice(0, 200)}`),
+        { code: 'AI_API_ERROR' as const }
+      );
+    }
+
+    // Extract on-chain proof from response header
+    const rawPaymentResponse = response.headers.get('X-PAYMENT-RESPONSE');
+    let txHash: string | null = null;
+    if (rawPaymentResponse) {
+      try {
+        const decoded = JSON.parse(
+          Buffer.from(rawPaymentResponse, 'base64').toString('utf-8')
+        );
+        txHash = decoded.txHash ?? decoded.transaction_hash ?? null;
+      } catch {
+        console.warn('[opengradient] Could not parse X-PAYMENT-RESPONSE header');
+      }
+    }
+
+    const body = await response.json();
+    const rawContent: string = body?.choices?.[0]?.message?.content ?? '';
+    return { rawContent, txHash };
+  } catch (err: unknown) {
+    // If x402 payment fails, fall back to direct call
+    console.warn('[opengradient] x402 payment failed, falling back to direct call:', err instanceof Error ? err.message : err);
+    return callDirect(prompt);
+  }
+}
+
+async function callDirect(prompt: string): Promise<{ rawContent: string; txHash: string | null }> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 45_000);
 
@@ -134,6 +204,12 @@ export async function analyzeRepo(data: RepoData): Promise<VerdictResult> {
 
   const responseData = await response.json();
   const rawContent: string = responseData?.choices?.[0]?.message?.content ?? '';
+  return { rawContent, txHash: null };
+}
+
+export async function analyzeRepo(data: RepoData): Promise<VerdictResult & { txHash: string | null }> {
+  const prompt = buildSecurityPrompt(data);
+  const { rawContent, txHash } = await callWithX402(prompt);
 
   const jsonStr = rawContent
     .replace(/^```json\s*/i, '')
@@ -166,5 +242,5 @@ export async function analyzeRepo(data: RepoData): Promise<VerdictResult> {
     );
   }
 
-  return parsed;
+  return { ...parsed, txHash };
 }

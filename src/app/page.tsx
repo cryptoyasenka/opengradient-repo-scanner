@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { RepoInput } from "@/components/RepoInput";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { AnalysisProgress } from "@/components/AnalysisProgress";
 import { VerdictDisplay } from "@/components/VerdictDisplay";
+import { ProofBadge } from "@/components/ProofBadge";
 import { Button } from "@/components/ui/button";
 import type { FetchRepoError } from "@/types/github";
 import type { VerdictResult } from "@/types/verdict";
@@ -14,6 +16,7 @@ type AnalysisStep = "idle" | "fetching" | "analyzing" | "done" | "error";
 export default function Home() {
   const [step, setStep] = useState<AnalysisStep>("idle");
   const [verdictResult, setVerdictResult] = useState<VerdictResult | null>(null);
+  const [txHash, setTxHash] = useState<string>("");
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<FetchRepoError | null>(null);
   const [repoFullName, setRepoFullName] = useState<string>("");
@@ -21,6 +24,7 @@ export default function Home() {
   async function handleAnalyze(repoUrl: string) {
     setStep("fetching");
     setVerdictResult(null);
+    setTxHash("");
     setAnalysisError(null);
     setFetchError(null);
     setRepoFullName("");
@@ -47,7 +51,7 @@ export default function Home() {
       return;
     }
 
-    // Step 2: Analyze with AI
+    // Step 2: Analyze with AI (+ x402 payment if APP_WALLET_PRIVATE_KEY is set)
     setStep("analyzing");
     try {
       const res = await fetch("/api/analyze", {
@@ -61,7 +65,9 @@ export default function Home() {
         setStep("error");
         return;
       }
-      setVerdictResult(json as VerdictResult);
+      const verdict = json as VerdictResult & { txHash?: string };
+      if (verdict.txHash) setTxHash(verdict.txHash);
+      setVerdictResult(verdict);
       setStep("done");
     } catch {
       setAnalysisError("AI analysis failed. Please try again.");
@@ -72,6 +78,7 @@ export default function Home() {
   function handleReset() {
     setStep("idle");
     setVerdictResult(null);
+    setTxHash("");
     setAnalysisError(null);
     setFetchError(null);
     setRepoFullName("");
@@ -81,11 +88,16 @@ export default function Home() {
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-12">
         {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">GitHub Security Checker</h1>
-          <p className="mt-2 text-muted-foreground">
-            Analyze any public GitHub repository for supply chain security signals.
-          </p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">GitHub Security Checker</h1>
+            <p className="mt-2 text-muted-foreground">
+              AI-powered supply chain security analysis for GitHub repositories.
+            </p>
+          </div>
+          <div className="shrink-0 pt-1">
+            <ConnectButton chainStatus="icon" showBalance={false} />
+          </div>
         </div>
 
         {/* Input — always visible when not done */}
@@ -101,7 +113,7 @@ export default function Home() {
           <AnalysisProgress step={step} />
         )}
 
-        {/* Fetch error (invalid URL, not found, etc.) */}
+        {/* Fetch error */}
         {step === "error" && fetchError && (
           <div className="mt-8">
             <ErrorDisplay error={fetchError} onReset={handleReset} />
@@ -110,19 +122,20 @@ export default function Home() {
 
         {/* Analysis error */}
         {step === "error" && !fetchError && (
-          <div className="mt-8">
+          <div className="mt-8 space-y-4">
             <AnalysisProgress step="error" errorMessage={analysisError ?? undefined} />
-            <div className="mt-4">
-              <Button variant="outline" onClick={handleReset}>Try another repository</Button>
-            </div>
+            <Button variant="outline" onClick={handleReset}>Try another repository</Button>
           </div>
         )}
 
         {/* Verdict result */}
         {step === "done" && verdictResult && (
-          <div className="mt-8">
+          <div className="mt-8 space-y-6">
+            {txHash && (
+              <ProofBadge txHash={txHash} analyzedAt={verdictResult.analyzedAt} />
+            )}
             <VerdictDisplay result={verdictResult} repoFullName={repoFullName} />
-            <div className="mt-6 text-center">
+            <div className="text-center">
               <Button variant="outline" onClick={handleReset}>
                 Check another repository
               </Button>
