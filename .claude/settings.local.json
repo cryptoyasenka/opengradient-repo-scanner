@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node \"C:/Users/Yana/.claude/get-shit-done/bin/gsd-tools.cjs\" init plan-phase \"1\")",
+      "Bash(cd:*)",
+      "Bash(node \"C:/Users/Yana/.claude/get-shit-done/bin/gsd-tools.cjs\" roadmap get-phase \"1\" --pick section)",
+      "Bash(node \"C:/Users/Yana/.claude/get-shit-done/bin/gsd-tools.cjs\" roadmap get-phase \"2\" --pick section)",
+      "Bash(node \"C:/Users/Yana/.claude/get-shit-done/bin/gsd-tools.cjs\" roadmap get-phase \"3\" --pick section)",
+      "Bash(node \"C:/Users/Yana/.claude/get-shit-done/bin/gsd-tools.cjs\" roadmap get-phase \"4\" --pick section)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Projects/opengradient 1/**)",
+      "Bash(done)",
+      "Bash(find 'C:/Projects/opengradient 1/.planning/phases' -name *.md)",
+      "Bash(gh repo:*)",
+      "Bash(where gh:*)",
+      "Bash(where git:*)"
+    ]
+  }
+}
