@@ -1,25 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { RepoInput } from "@/components/RepoInput";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { AnalysisProgress } from "@/components/AnalysisProgress";
 import { VerdictDisplay } from "@/components/VerdictDisplay";
 import { ProofBadge } from "@/components/ProofBadge";
+import { ShareButton } from "@/components/ShareButton";
 import { Button } from "@/components/ui/button";
+import { useResultParams } from "@/hooks/useResultParams";
 import type { FetchRepoError } from "@/types/github";
 import type { VerdictResult } from "@/types/verdict";
 
 type AnalysisStep = "idle" | "fetching" | "analyzing" | "done" | "error";
 
 export default function Home() {
+  return (
+    <Suspense>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function HomeContent() {
   const [step, setStep] = useState<AnalysisStep>("idle");
   const [verdictResult, setVerdictResult] = useState<VerdictResult | null>(null);
   const [txHash, setTxHash] = useState<string>("");
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<FetchRepoError | null>(null);
   const [repoFullName, setRepoFullName] = useState<string>("");
+
+  const { encodeResult, clearResult } = useResultParams();
 
   async function handleAnalyze(repoUrl: string) {
     setStep("fetching");
@@ -66,9 +78,19 @@ export default function Home() {
         return;
       }
       const verdict = json as VerdictResult & { txHash?: string };
-      if (verdict.txHash) setTxHash(verdict.txHash);
+      const resolvedTxHash = verdict.txHash ?? "";
+      if (resolvedTxHash) setTxHash(resolvedTxHash);
       setVerdictResult(verdict);
       setStep("done");
+
+      // Encode result into URL for sharing
+      encodeResult({
+        repo: repoData.repo?.full_name ?? repoUrl,
+        verdict: verdict.verdict,
+        score: verdict.overall_score,
+        txHash: resolvedTxHash,
+        summary: verdict.reasoning ?? verdict.top_findings?.[0] ?? "",
+      });
     } catch {
       setAnalysisError("AI analysis failed. Please try again.");
       setStep("error");
@@ -82,6 +104,7 @@ export default function Home() {
     setAnalysisError(null);
     setFetchError(null);
     setRepoFullName("");
+    clearResult();
   }
 
   return (
@@ -92,7 +115,7 @@ export default function Home() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">GitHub Security Checker</h1>
             <p className="mt-2 text-muted-foreground">
-              AI-powered supply chain security analysis for GitHub repositories.
+              AI-powered supply chain security analysis, verified on-chain.
             </p>
           </div>
           <div className="shrink-0 pt-1">
@@ -100,7 +123,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Input — always visible when not done */}
+        {/* Input */}
         {step !== "done" && (
           <RepoInput
             onSubmit={handleAnalyze}
@@ -108,7 +131,7 @@ export default function Home() {
           />
         )}
 
-        {/* Progress steps */}
+        {/* Progress */}
         {(step === "fetching" || step === "analyzing") && (
           <AnalysisProgress step={step} />
         )}
@@ -135,7 +158,8 @@ export default function Home() {
               <ProofBadge txHash={txHash} analyzedAt={verdictResult.analyzedAt} />
             )}
             <VerdictDisplay result={verdictResult} repoFullName={repoFullName} />
-            <div className="text-center">
+            <div className="flex items-center justify-center gap-3">
+              <ShareButton />
               <Button variant="outline" onClick={handleReset}>
                 Check another repository
               </Button>

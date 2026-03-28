@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GitHub Security Checker
 
-## Getting Started
+AI-powered supply chain security analysis for GitHub repositories, verified on-chain.
 
-First, run the development server:
+## What it does
+
+Paste any public GitHub repo URL and get an instant security verdict — **Safe**, **Risky**, or **Dangerous** — with a 0–100 risk score and a breakdown across 7 categories:
+
+- Dependency health (package.json, lock files)
+- CI/CD pipeline (GitHub Actions workflows)
+- Maintainer credibility & contributor patterns
+- Commit history & release cadence
+- Secret exposure risk
+- Code quality signals
+- License & compliance
+
+If `APP_WALLET_PRIVATE_KEY` is set, analysis is paid via [x402](https://x402.org/) micropayments on Base Sepolia and the result is verified by [OpenGradient TEE](https://opengradient.ai/). The on-chain proof is shown as a badge with a Basescan link.
+
+Results are shareable — encoded into the URL so anyone with the link can view the verdict without re-running analysis.
+
+## Stack
+
+- **Next.js 16** (App Router) + TypeScript + Tailwind CSS v4
+- **OpenGradient** — LLM inference gateway (GPT-4o)
+- **x402** — HTTP-native micropayment protocol for AI inference
+- **wagmi v2 + RainbowKit** — wallet connection (Base Sepolia)
+- **nuqs** — URL-encoded shareable state
+
+## Getting started
 
 ```bash
+git clone https://github.com/cryptoyasenka/github-security-checker
+cd github-security-checker
+npm install
+cp .env.example .env.local
+# fill in .env.local (see below)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GITHUB_TOKEN` | No | GitHub PAT (no scopes needed). Raises rate limit from 60 to 5000 req/hr |
+| `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | Yes | WalletConnect Cloud project ID for RainbowKit |
+| `APP_WALLET_PRIVATE_KEY` | No | Private key of a Base Sepolia wallet holding OPG tokens. Enables x402 payments + on-chain proof |
 
-## Learn More
+Without `APP_WALLET_PRIVATE_KEY` the app falls back to direct AI calls (no on-chain proof badge).
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run dev      # development server
+npm run build    # production build
+npm run lint     # ESLint
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
