@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { RepoInput } from "@/components/RepoInput";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { AnalysisProgress } from "@/components/AnalysisProgress";
@@ -111,16 +110,11 @@ function HomeContent() {
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-12">
         {/* Header */}
-        <div className="mb-8 flex items-start justify-between gap-4">
-          <div>
+        <div className="mb-8">
             <h1 className="text-3xl font-bold tracking-tight">GitHub Security Checker</h1>
             <p className="mt-2 text-muted-foreground">
               AI-powered supply chain security analysis, verified on-chain.
             </p>
-          </div>
-          <div className="shrink-0 pt-1">
-            <ConnectButton chainStatus="icon" showBalance={false} />
-          </div>
         </div>
 
         {/* Input */}
