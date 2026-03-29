@@ -79,8 +79,8 @@ User enters GitHub repo URL
 ## Getting started
 
 ```bash
-git clone https://github.com/cryptoyasenka/github-security-checker
-cd github-security-checker
+git clone https://github.com/cryptoyasenka/opengradient-repo-scanner
+cd opengradient-repo-scanner
 npm install --legacy-peer-deps
 cp .env.example .env.local
 # fill in .env.local (see below)
