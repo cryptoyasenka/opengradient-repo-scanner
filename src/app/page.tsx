@@ -5,6 +5,7 @@ import { RepoInput } from "@/components/RepoInput";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { AnalysisProgress } from "@/components/AnalysisProgress";
 import { VerdictDisplay } from "@/components/VerdictDisplay";
+import { VerdictCard } from "@/components/VerdictCard";
 import { ProofBadge } from "@/components/ProofBadge";
 import { ShareButton } from "@/components/ShareButton";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,7 @@ function HomeContent() {
   const [fetchError, setFetchError] = useState<FetchRepoError | null>(null);
   const [repoFullName, setRepoFullName] = useState<string>("");
 
-  const { encodeResult, clearResult } = useResultParams();
+  const { repo: sharedRepo, verdict: sharedVerdict, score: sharedScore, txHash: sharedTx, summary: sharedSummary, analysisDate: sharedDate, hasResult: hasSharedResult, encodeResult, clearResult } = useResultParams();
 
   async function handleAnalyze(repoUrl: string) {
     setStep("fetching");
@@ -125,8 +126,39 @@ function HomeContent() {
           </p>
         </div>
 
+        {/* Shared result from URL */}
+        {hasSharedResult && step === "idle" && (
+          <div className="space-y-6 og-fade-up" style={{ animationDelay: '0.4s' }}>
+            <div className="space-y-1 mb-4">
+              <p className="text-sm text-[#999999]">Security analysis result</p>
+              <h2 className="text-lg font-semibold text-[#e6e6e6] break-all font-mono">{sharedRepo}</h2>
+              {sharedDate && <p className="text-xs text-[#666666]">Analyzed on {sharedDate}</p>}
+            </div>
+
+            <VerdictCard
+              verdict={(sharedVerdict === 'Safe' || sharedVerdict === 'Risky' || sharedVerdict === 'Dangerous') ? sharedVerdict : 'Risky'}
+              score={sharedScore}
+              summary={sharedSummary}
+            />
+
+            {sharedTx && <ProofBadge txHash={sharedTx} analyzedAt={sharedDate || new Date().toISOString()} />}
+
+            <div className="rounded-xl border border-dashed border-[rgba(36,188,227,0.15)] p-3 text-xs text-[#666666]">
+              This is an AI-assisted surface analysis, not a professional security audit.
+              Results may be inaccurate. Always verify critical dependencies independently.
+            </div>
+
+            <div className="flex items-center justify-center gap-3">
+              <ShareButton />
+              <button onClick={() => clearResult()} className="h-8 px-3 rounded-lg text-sm font-medium border border-[rgba(36,188,227,0.3)] bg-transparent text-[#bdebf7] hover:bg-[rgba(36,188,227,0.1)] hover:border-[rgba(36,188,227,0.5)] transition-all duration-300">
+                Check another repository
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Input */}
-        {step !== "done" && (
+        {step !== "done" && !(hasSharedResult && step === "idle") && (
           <div className="og-fade-up" style={{ animationDelay: '0.5s' }}>
             <RepoInput
               onSubmit={handleAnalyze}
