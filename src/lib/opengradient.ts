@@ -106,7 +106,7 @@ ANALYZE THESE SPECIFIC SIGNAL CATEGORIES IN ORDER:
 2. REPOSITORY CREDIBILITY: Repo age, stars, license, description quality
 3. PACKAGE MANIFEST RISKS: postinstall hooks, suspicious scripts, typosquatting names
 4. CODE BEHAVIOR RISKS: base64 decode+exec, network calls in install scripts, obfuscation
-5. COMMIT INTEGRITY: Commit frequency, author consistency, suspicious timing patterns
+5. COMMIT INTEGRITY: Commit frequency, author consistency, suspicious timing patterns. IMPORTANT: When checking author consistency, match by EMAIL address, not display name. Different display names with the same email are the SAME person (e.g. git config name changes) — do NOT flag this as suspicious.
 6. README RED FLAGS: External payment links, piracy claims, unrealistic promises
 7. GITHUB ACTIONS RISKS: External fetches, base64 commands, mutable action tags, secret logging
 
